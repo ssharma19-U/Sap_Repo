@@ -1,0 +1,148 @@
+---
+title: "Project"
+output:
+  pdf_document: default
+  html_document: default
+---
+We are going to load all the packages we will be using throughout this project.
+
+```{r, echo=FALSE}
+#loading all the packages
+library(readr)
+library(readxl)
+suppressPackageStartupMessages(library(dplyr))
+library(reshape2)
+library(ggplot2)
+library(corrplot)
+```
+Transforming the data into more readable format and removing unwanted columns and renaming the columns to more meaningful names.
+
+
+```{r}
+df <- readxl::read_excel("happiness_index.xls", sheet = 2)
+df$`Whisker-high` <- NULL
+df$`Whisker-low` <- NULL
+df$...12 <- NULL
+
+df <- rename(df, Happiness_Index = "Happiness score",GDP_Per_Capita = "Explained by: GDP per capita",BaseLine_Score = "Dystopia (1.88) + residual", Social_Support = "Explained by: Social support", Life_Expectancy = "Explained by: Healthy life expectancy", Freedom_to_MakeChoices = "Explained by: Freedom to make life choices", Generosity = "Explained by: Generosity", Perception_of_Curruption = "Explained by: Perceptions of corruption")
+
+
+df <- mutate(df, ranking = rank(desc(df$Happiness_Index)))
+head(df[, c("Country", "ranking")], n=10)
+
+```
+The rankings in Table Above of World Happiness Report 2019 use data that come from the Gallup World Poll (for more information see the Gallup World Poll methodology). The rankings are based on answers to the main life evaluation question asked in the poll. This is called the Cantril ladder: it asks respondents to think of a ladder, with the best possible life for them being a 10, and the worst possible life being a 0. They are then asked to rate their own current lives on that 0 to 10 scale. The rankings are from nationally representative samples, for the years 2008-2018. They are based entirely on the survey scores, using the Gallup weights to make the estimates representative. The sub-bars show the estimated extent to which each of six factors - levels of GDP, life expectancy, generosity, social support, freedom, and corruption - contribute to making life evaluations higher in each country than they are in Dystopia, a hypothetical country that has values equal to the world’s lowest national averages for each of the six factors (see FAQs: What is Dystopia?). 
+
+Below graph shows each country's progress in terms of life ladder since last 10 year (2008-2018)
+
+```{r}
+df_spread <- readxl::read_excel("happiness_index.xls", sheet = 1)
+
+df_spread <- df_spread[,c(1:3)]
+df_spread <- rename(df_spread , Country = "Country name", Life = "Life Ladder")
+df_spread$Life <- round(df_spread$Life, 2)
+
+
+
+happiness.plot <- function(name = ""){
+  if(name != ""){
+    
+    df <- filter(df_spread, tolower(Country) == tolower(name))
+    qplot(Year, Life, data = df, geom = "point" )
+    
+  }
+}
+
+happiness.plot("ireLand")
+```
+
+Sorting the data by each column to see which country is leading/trailing in each of the independent variable.
+```{r}
+
+
+
+
+for(i in 1:nrow(df)){
+    GDP <- df$GDP_Per_Capita[i]
+    Baseline <- df$BaseLine_Score[i]
+    SS <- df$Social_Support[i]
+    LE <- df$Life_Expectancy[i]
+    Freedom <- df$Freedom_to_MakeChoices[i]
+    Generosity <- df$Generosity[i]
+    Corruption <- df$Perception_of_Curruption[i]
+    
+    if(GDP == max(df$GDP_Per_Capita)){
+        print(paste("The Country with Highest GDP is", df$Country[i]))
+    }else if(GDP == min(df$GDP_Per_Capita)){
+        print(paste("The Country with lowest GDP is", df$Country[i]))
+      
+    }else if(Baseline == max(df$BaseLine_Score)){
+        print(paste("The Country with Highest baseline score is", df$Country[i]))
+      
+    }else if(Baseline == min(df$BaseLine_Score)){
+        print(paste("The Country with Highest baseline score is", df$Country[i]))
+      
+    }else if(SS == max(df$Social_Support)){
+        print(paste("The Country with Highest social support is", df$Country[i]))
+      
+    }else if(SS == min(df$Social_Support)){
+        print(paste("The Country with least social support is", df$Country[i]))
+      
+    }else if(LE == max(df$Life_Expectancy)){
+        print(paste("The Country with Highest life expectancy is", df$Country[i]))
+      
+    }else if(LE == min(df$Life_Expectancy)){
+        print(paste("The Country with minimum life expectancy is", df$Country[i]))
+    
+    }else if(Freedom == max(df$Freedom_to_MakeChoices)){
+        print(paste("The Country with most freedom to make choices is", df$Country[i]))
+      
+    }else if(Freedom == min(df$Freedom_to_MakeChoices)){
+        print(paste("The Country with least freedom to make choices is", df$Country[i]))
+      
+    }else if(Generosity == max(df$Generosity)){
+        print(paste("The Country with most generous people(% who donated to charity) is", df$Country[i]))
+      
+    }else if(Generosity == min(df$Generosity)){
+        print(paste("The Country with least generous people(% who donated to charity) is", df$Country[i]))
+    }else if(Corruption == min(df$Perception_of_Curruption)){
+        print(paste("The most corrupt country in the world is", df$Country[i]))
+    }else if(Corruption == max(df$Perception_of_Curruption)){
+        print(paste("The least corrupt country in the world is", df$Country[i]))
+    }
+}
+
+```
+
+Now we will determine the coutry ranking in terms of happiness index. Also values of all the independent variables for the country user inputs using a function
+```{r}
+
+Ranking.search <- function(name = ""){
+  ranking = rank(desc(df$Happiness_Index))
+  df <- mutate(df, ranking)
+  if(name != ""){
+    df <- df[tolower(df$Country) == tolower(name), ]
+    print(df)
+    rank <- df[tolower(df$Country) == tolower(name), c("Country", "ranking")]
+    print(rank)
+    }else{
+      msg <- sprintf("The country name you entered does not exist")
+      message(msg)
+    }
+}
+Ranking.search("united states")
+
+```
+
+```{r}
+
+library(corrplot)
+
+Cor_data <- select(df, -Country)
+correl <- cor(Cor_data)
+round(correl,2)
+corrplot(correl, type = "lower", order = "FPC",tl.col = "black", tl.srt = 45)
+
+```
+
+
